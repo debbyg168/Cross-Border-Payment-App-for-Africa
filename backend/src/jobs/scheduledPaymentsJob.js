@@ -173,6 +173,22 @@ async function processOne(payment) {
     memo: payment.memo,
   });
 
+  // BE-149: The on-chain send already succeeded at this point. Any DB failure
+  // below must NOT flip the schedule to 'failed' (that would let a user retry
+  // and pay twice). Wrap the transaction insert + schedule advance in a single
+  // DB transaction so they commit atomically, and swallow post-send DB errors
+  // so the row is never marked failed after a successful payment.
+  const freq = (payment.frequency || '').toLowerCase();
+  const isRecurring = freq === 'daily' || freq === 'weekly' || freq === 'monthly';
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    await client.query(
+      `INSERT INTO transactions (sender_wallet, recipient_wallet, amount, asset, memo, tx_hash, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'completed')`,
+      [payment.sender_wallet, payment.recipient_wallet, payment.amount, payment.asset, payment.memo, transactionHash]
   await db.query(
     `INSERT INTO transactions (sender_wallet, recipient_wallet, amount, asset, memo, tx_hash, status, fee_amount, fee_breakdown)
      VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7, $8)`,
@@ -203,6 +219,38 @@ async function processOne(payment) {
        WHERE id = $1`,
       [payment.id]
     );
+
+    // Advance the schedule for recurring payments instead of marking them
+    // completed after the first execution. This keeps the job in sync with
+    // the `execute_at`/frequency` schema exposed to the frontend.
+    if (isRecurring) {
+      const interval = freq === 'daily' ? '1 day' : freq === 'weekly' ? '7 days' : '1 month';
+      await client.query(
+        `UPDATE scheduled_payments
+         SET status = 'pending',
+             run_at = run_at + $2::interval,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [payment.id, interval]
+      );
+    } else {
+      await client.query(
+        `UPDATE scheduled_payments SET status = 'completed', updated_at = NOW() WHERE id = $1`,
+        [payment.id]
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    // The payment was already sent on-chain; do not mark the schedule failed.
+    logger.error('Post-send DB update failed for scheduled payment', {
+      id: payment.id,
+      tx_hash: transactionHash,
+      error: err.message,
+    });
+  } finally {
+    client.release();
   }
 
   logger.info('Scheduled payment executed', { id: payment.id, tx_hash: transactionHash, ledger });

@@ -63,7 +63,9 @@ if (process.env.TRUST_PROXY) {
   app.set('trust proxy', /^\d+$/.test(tp) ? parseInt(tp, 10) : tp === 'true' ? true : tp);
 }
 
-app.use(Sentry.Handlers.requestHandler());
+// Sentry v8 removed the v7 `Sentry.Handlers` namespace. Request isolation is
+// handled by `Sentry.init()` and errors are captured via
+// `Sentry.setupExpressErrorHandler(app)` registered after all routes below.
 
 app.use(requestId);
 app.use((req, res, next) => {
@@ -177,6 +179,10 @@ if (process.env.NODE_ENV !== 'production') {
 }
 app.use('/', stellarTomlRoutes);
 
+// Sentry v8: register the Express error handler after all routes so thrown
+// route errors are reported. No-op when Sentry was not initialized (no DSN).
+Sentry.setupExpressErrorHandler(app);
+
 // Swagger API Documentation
 const swaggerOptions = {
   definition: {
@@ -208,23 +214,6 @@ const swaggerOptions = {
         Error: {
           type: 'object',
           properties: {
-            error: {
-              type: 'string'
-            },
-            errors: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  msg: { type: 'string' },
-                  param: { type: 'string' }
-                }
-              }
-            }
-          }
-        },
-        // Derived directly from the express-validator field spec in
-        // validators/paymentSendValidators.js so the docs cannot drift from
-        // what the runtime v
+            error
 
-/* … truncated 72 chars — edit only what you need near the top … */
+/* … truncated 587 chars — edit only what you need near the top … */
