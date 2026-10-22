@@ -388,6 +388,10 @@ impl KycAttestationContract {
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
+/* … truncated 1568 chars — edit only what you need near the top … */
+
+mod governance;
+pub use governance::{CONTRACT_VERSION, UPGRADE_TIMELOCK_SECS};
     fn assert_admin(env: &Env, caller: &Address) {
         let stored: Address = env
             .storage()

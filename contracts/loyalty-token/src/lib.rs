@@ -449,6 +449,7 @@ impl LoyaltyTokenContract {
     /// Emits the SEP-41 `transfer` event with topics `("transfer", from, to)`
     /// and data `amount`.
     pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
+        governance::require_not_paused(&env);
         from.require_auth();
         if amount <= 0 {
             panic!("amount must be positive");
@@ -465,6 +466,7 @@ impl LoyaltyTokenContract {
     /// Emits the SEP-41 `transfer` event with topics `("transfer", from, to)`
     /// and data `amount`.
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, amount: i128) {
+        governance::require_not_paused(&env);
         spender.require_auth();
         if amount <= 0 {
             panic!("amount must be positive");
@@ -484,6 +486,7 @@ impl LoyaltyTokenContract {
     /// Emits the SEP-41 `mint` event with topics `("mint", admin, to)` and
     /// data `amount`.
     pub fn mint(env: Env, admin: Address, to: Address, amount: i128) {
+        governance::require_not_paused(&env);
         admin.require_auth();
         let stored_admin: Address = env.storage().persistent().get(&DataKey::Admin).unwrap();
         if admin != stored_admin {
@@ -624,3 +627,6 @@ impl LoyaltyTokenContract {
             .set(&DataKey::Balance(account.clone()), &balance);
     }
 }
+
+mod governance;
+pub use governance::{CONTRACT_VERSION, UPGRADE_TIMELOCK_SECS};

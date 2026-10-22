@@ -591,6 +591,10 @@ impl FeeDistributorContract {
             panic!("split_bps exceeds maximum of 5000");
         }
 
+/* … truncated 8814 chars — edit only what you need near the top … */
+
+mod governance;
+pub use governance::{CONTRACT_VERSION, UPGRADE_TIMELOCK_SECS};
         let old_split_bps: u32 = env
             .storage()
             .persistent()

@@ -782,6 +782,10 @@ impl SavingsVaultContract {
             .unwrap_or(0u32)
     }
 
+    /// Deposit tokens into the vault. Accumulates on top of any existing balance.
+    /// Extends the unlock time only if the new unlock_time is later than the current one.
+    pub fn deposit(env: Env, user: Address, amount: i128, unlock_time: u64) {
+        governance::require_not_paused(&env);
     /// Open a new, independent savings vault for `user` holding `amount` until
     /// `unlock_time`. Returns the new vault's id.
     ///
@@ -1139,3 +1143,6 @@ impl SavingsVaultContract {
         );
     }
 }
+
+mod governance;
+pub use governance::{CONTRACT_VERSION, UPGRADE_TIMELOCK_SECS};

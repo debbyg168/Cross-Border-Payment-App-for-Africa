@@ -900,3 +900,6 @@ impl RecurringPaymentsContract {
         next
     }
 }
+
+mod governance;
+pub use governance::{CONTRACT_VERSION, UPGRADE_TIMELOCK_SECS};

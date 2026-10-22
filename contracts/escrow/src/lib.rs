@@ -1,9 +1,11 @@
 #![no_std]
+use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, IntoVal, Symbol};
 use soroban_sdk::{contract, contractimpl, contracttype, token, Address, BytesN, Env, IntoVal, String, Symbol};
 
 #[cfg(test)]
 mod test;
 
+#[derive(Clone)]
 /// Semantic version of this contract. Bumped on every upgrade.
 pub const CONTRACT_VERSION: u32 = 3;
 
@@ -442,6 +444,7 @@ impl EscrowContract {
         amount: i128,
         max_fee_bps: u32,
     ) -> u64 {
+        governance::require_not_paused(&env);
         if amount < MIN_ESCROW_AMOUNT {
             panic!("Amount below minimum (100 stroops)");
         }
@@ -526,6 +529,7 @@ impl EscrowContract {
     }
 
     pub fn deposit(env: Env, sender: Address, escrow_id: u64, amount: i128) {
+        governance::require_not_paused(&env);
         if amount <= 0 {
             panic!("Amount must be positive");
         }
@@ -1321,6 +1325,7 @@ impl EscrowContract {
         sender: Address,
         escrows: soroban_sdk::Vec<EscrowParams>,
     ) -> u64 {
+        governance::require_not_paused(&env);
         sender.require_auth();
 
         let batch_size = escrows.len();
@@ -1466,3 +1471,6 @@ impl EscrowContract {
             .get(&DataKey::KycContractAddress)
     }
 }
+
+mod governance;
+pub use governance::{CONTRACT_VERSION, UPGRADE_TIMELOCK_SECS};
