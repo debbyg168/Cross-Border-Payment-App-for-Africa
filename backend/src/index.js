@@ -43,6 +43,10 @@ const { startScheduler, stopScheduler } = require('./scheduler');
 const { setSocketIO } = require('./services/notificationInbox');
 const { isJtiBlacklisted } = require('./controllers/sessionController');
 
+// Sentry v8: register the Express error handler after all routes are mounted
+// so thrown route errors are reported. Must run before app.listen().
+Sentry.setupExpressErrorHandler(app);
+
 const PORT = process.env.PORT || 5000;
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
